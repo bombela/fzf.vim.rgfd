@@ -1,0 +1,92 @@
+fzf-vim.txt	fzf-vim	Last change: June 4 2023
+fzf-vim-rgfd - TABLE OF CONTENTS                                *fzf-vim-rgfd* *fzf-vim-rgfd-toc*
+==============================================================================
+
+    Description                             |fzf-vim-rgfd-desc|
+    Configuration                           |fzf-vim-rgfd-config|
+    Dependencies                            |fzf-vim-rgfd-deps|
+    :Fd                                     |fzf-vim-rgfd-fd|
+    :Rg                                     |fzf-vim-rgfd-rg|
+    License                                 |fzf-vim-rgfd-license|
+
+
+Description                                                  *fzf-vim-rgfd-desc*
+==============================================================================
+
+Add a refined support for searching through files with `rg` and searching
+files with `fd` to vim via (https://github.com/junegunn/fzf.vim).
+
+https://github.com/bombela/fzf.vim.rgfd
+
+Configuration example                                      *fzf-vim-rgfd-config*
+==============================================================================
+
+" Current working directory, file search (project search).
+" The search resumes with the last searched path. ctrl-r resets to the CWD.
+map <C-p> :Fd . . 1<CR>
+
+" Relative to current file, file search (relative search).
+" The search never resumes.
+map <C-\> :Fd . %:h 0<CR>
+
+TODO rg
+
+Dependencies                                                 *fzf-vim-rgfd-deps*
+==============================================================================
+
+ - `:Rg` requires {ripgrep (rg)}{1}
+ - `:Fd` requires {fd-find (fd)}{2}
+
+                             {1} https://github.com/BurntSushi/ripgrep
+                             {2} https://github.com/sharkdp/fd
+
+
+:Fd                                                        *fzf-vim-rgfd-fd* *:Fd*
+==============================================================================
+
+*:Fd[!]* [PATTERN] [PATH] [RESUME=0]
+
+Run `fd PATTERN PATH|fzf` .
+
+PATTERN defaults to `.` (regex search all).
+PATH defaults to `.` (current working directory).
+With RESUME set to 1, the last searched path is resumed.
+
+The bang (!) opens fzf in fullscreen.
+
+Unless absolute, PATH is relative to the current working directory. The
+default is `.` (the current working directory). The PATH is always passed
+through |expand()|.
+
+The following extra key bindings are available within the FZF window:
+
+ctrl-Z switch to editing the `fd` PATTERN (prompt reads "fd>")
+ctrl-z switch to the fuzzy search (prompt reads "fdz>").
+alt-h toggle include hidden (--hidden)
+alt-i toggle show ignored files (--no-ignore)
+alt-l toggle follow links (--follow)
+alt-d toggle show directories only (-td instead of -tf -tl)
+alt-u move up a directory
+alt-r set PATH to the current selection (parent's directory for a file)
+ctrl-r reset PATH to current working directory
+
+They are not always the most ergonomic, it was a compromise between fzf,
+terminal control and (neo)vim terminal integration.
+
+The file paths in the FZF window are always relative to the PATH.
+The header (first line) above the prompt displays the current PATH with two
+possible forms:
+	- (~/<CWD relative to $HOME>)/<PATH relative to CWD>
+	- /<absolute PATH>
+
+:Rg                                 `                      *fzf-vim-rgfd-fd* *:Rg*
+==============================================================================
+
+LICENSE                                                   *fzf-vim-rgfd-license*
+==============================================================================
+
+MIT
+
+
+==============================================================================
+vim:tw=78:sw=2:ts=2:ft=help:norl:nowrap:
