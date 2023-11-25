@@ -6,6 +6,100 @@ let s:bin = {
 \ 'fd':      s:bin_dir.'fd.sh',
 \ 'rg':      s:bin_dir.'rg.sh',}
 
+" From the FZF plugin (not fzf.vim).
+" ============================================================================
+let s:is_win = has('win32') || has('win64')
+if s:is_win
+  function! s:fzf_call(fn, ...)
+    let shellslash = &shellslash
+    try
+      set noshellslash
+      return call(a:fn, a:000)
+    finally
+      let &shellslash = shellslash
+    endtry
+  endfunction
+else
+  function! s:fzf_call(fn, ...)
+    return call(a:fn, a:000)
+  endfunction
+endif
+
+function! s:fzf_expand(fmt)
+  return s:fzf_call('expand', a:fmt, 1)
+endfunction
+
+function! s:fzf_fnamemodify(fname, mods)
+  return s:fzf_call('fnamemodify', a:fname, a:mods)
+endfunction
+
+function! s:escape(path)
+  let path = fnameescape(a:path)
+  return s:is_win ? escape(path, '$') : path
+endfunction
+
+function! s:open(cmd, target)
+  if stridx('edit', a:cmd) == 0 && s:fzf_fnamemodify(a:target, ':p') ==# s:fzf_expand('%:p')
+    return
+  endif
+  execute a:cmd s:escape(a:target)
+endfunction
+
+let s:default_action = {
+  \ 'ctrl-t': 'tab split',
+  \ 'ctrl-x': 'split',
+  \ 'ctrl-v': 'vsplit' }
+
+function! s:common_sink(action, lines) abort
+  if len(a:lines) < 2
+    return
+  endif
+  let key = remove(a:lines, 0)
+  let Cmd = get(a:action, key, 'e')
+  if type(Cmd) == type(function('call'))
+    return Cmd(a:lines)
+  endif
+  if len(a:lines) > 1
+    augroup fzf_swap
+      autocmd SwapExists * let v:swapchoice='o'
+            \| call s:warn('fzf: E325: swap file exists: '.s:fzf_expand('<afile>'))
+    augroup END
+  endif
+  try
+    let empty = empty(s:fzf_expand('%')) && line('$') == 1 && empty(getline(1)) && !&modified
+    " Preserve the current working directory in case it's changed during
+    " the execution (e.g. `set autochdir` or `autocmd BufEnter * lcd ...`)
+    let cwd = exists('w:fzf_pushd') ? w:fzf_pushd.dir : expand('%:p:h')
+    for item in a:lines
+      if item[0] != '~' && item !~ (s:is_win ? '^[A-Z]:\' : '^/')
+        let sep = s:is_win ? '\' : '/'
+        let item = join([cwd, item], cwd[len(cwd)-1] == sep ? '' : sep)
+      endif
+      if empty
+        execute 'e' s:escape(item)
+        let empty = 0
+      else
+        call s:open(Cmd, item)
+      endif
+      if !has('patch-8.0.0177') && !has('nvim-0.2') && exists('#BufEnter')
+            \ && isdirectory(item)
+        doautocmd BufEnter
+      endif
+    endfor
+  catch /^Vim:Interrupt$/
+  finally
+    silent! autocmd! fzf_swap
+  endtry
+endfunction
+" ============================================================================
+
+function s:sinkall(basedir, lines)
+    let basedir = fnamemodify(a:basedir, ':p')
+    let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
+	let action = get(g:, 'fzf_action', s:default_action)
+	return s:common_sink(action, lines)
+endfunction
+
 let s:fdcfg = tempname()
 function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
   let p = 'fd'
@@ -57,21 +151,17 @@ function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
         \'--color=dark,hl:'.hl_color.':bold,hl+:'.hl_color.':reverse',
         \], 'source': initial_cmd}
   let spec = fzf#vim#with_preview(spec)
-  return fzf#vim#files('', spec, a:bang)
+  " TODO use full prefix path
+  "return fzf#vim#files('', spec, a:bang)
   let spec.sh = sh
   function! spec.newsink(lines)
-    let basedir = get(systemlist(self.sh.'basedir'), 0, '')
-    let basedir = fnamemodify(basedir, ':p')
-    echom("basedir:".basedir)
-    let lines = a:lines
-    let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
-    for line in lines
-      echom("line:".line)
-    endfor
-    return lines
+    let basedir = get(systemlist(self.sh.'prefix'), 0, '')
+    return s:sinkall(basedir, a:lines)
   endfunction
   let spec['sink*'] = remove(spec, 'newsink')
+  return fzf#vim#files('', spec, a:bang)
 endfunction
-" ------------------------------------------------------------------
+
+" ----------------------------------------------------------------------------
 let &cpo = s:cpo_save
 unlet s:cpo_save
