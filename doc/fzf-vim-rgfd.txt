@@ -13,8 +13,8 @@ fzf-vim-rgfd - TABLE OF CONTENTS                                *fzf-vim-rgfd* *
 Description                                                  *fzf-vim-rgfd-desc*
 ==============================================================================
 
-Add a refined support for searching through files with `rg` and searching
-files with `fd` to vim via (https://github.com/junegunn/fzf.vim).
+Interactive search through files with `rg` and searching
+files with `fd` with (https://github.com/junegunn/fzf.vim).
 
 https://github.com/bombela/fzf.vim.rgfd
 

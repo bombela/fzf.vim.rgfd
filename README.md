@@ -1,8 +1,8 @@
 fzf vim - rg/fd support
 ===============
 
-Add a refined support for searching through files with `rg` and searching files
-with `fd` to vim via [fzf.vim][fzf.vim].
+Interactive search through files with `rg` and searching
+files with `fd` with [fzf.vim][fzf.vim].
 
 Installation
 ------------
