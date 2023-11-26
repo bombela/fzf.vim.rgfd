@@ -30,8 +30,10 @@ so you can omit it if you use a plugin manager that doesn't support hooks.
 Commands
 --------
 
-| `:Rg [PATTERN]`        | [rg][rg] search result
-| `:Fd [PATTERN]`        | [fd][fd] search result
+|command|description|
+|---|---|
+| `:Fd[!] [PATTERN] [PATH] [RESUME=0]` | [rg][rg] search result |
+| `:Rd[!] PATTERN [PATH] [RESUME=0]` | [fd][fd] search result |
 
 Configuration example
 ---------------------
