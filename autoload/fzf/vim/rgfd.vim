@@ -93,6 +93,88 @@ function! s:common_sink(action, lines) abort
 endfunction
 " ============================================================================
 
+" From fzf.vim
+" ============================================================================
+let s:TYPE = {'bool': type(0), 'dict': type({}), 'funcref': type(function('call')), 'string': type(''), 'list': type([])}
+
+function! s:execute_silent(cmd)
+  silent keepjumps keepalt execute a:cmd
+endfunction
+
+" [key, [filename, [stay_on_edit: 0]]]
+function! s:action_for(key, ...)
+  let Cmd = get(get(g:, 'fzf_action', s:default_action), a:key, '')
+  let cmd = type(Cmd) == s:TYPE.string ? Cmd : ''
+
+  " See If the command is the default action that opens the selected file in
+  " the current window. i.e. :edit
+  let edit = stridx('edit', cmd) == 0 " empty, e, ed, ..
+
+  " If no extra argument is given, we just execute the command and ignore
+  " errors. e.g. E471: Argument required: tab drop
+  if !a:0
+    if !edit
+      normal! m'
+      silent! call s:execute_silent(cmd)
+    endif
+  else
+    " For the default edit action, we don't execute the action if the
+    " selected file is already opened in the current window, or we are
+    " instructed to stay on the current buffer.
+    let stay = edit && (a:0 > 1 && a:2 || fnamemodify(a:1, ':p') ==# expand('%:p'))
+    if !stay
+      normal! m'
+      call s:execute_silent((len(cmd) ? cmd : 'edit').' '.s:escape(a:1))
+    endif
+  endif
+endfunction
+
+function! s:fill_quickfix(name, list)
+  if len(a:list) > 1
+    let Handler = s:conf('listproc_'.a:name, s:conf('listproc', function('fzf#vim#listproc#quickfix')))
+    call call(Handler, [a:list], {})
+    return 1
+  endif
+  return 0
+endfunction
+
+function! s:ag_to_qf(line)
+  let parts = matchlist(a:line, '\(.\{-}\)\s*:\s*\(\d\+\)\%(\s*:\s*\(\d\+\)\)\?\%(\s*:\(.*\)\)\?')
+  let dict = {'filename': &acd ? fnamemodify(parts[1], ':p') : parts[1], 'lnum': parts[2], 'text': parts[4]}
+  if len(parts[3])
+    let dict.col = parts[3]
+  endif
+  return dict
+endfunction
+
+function! s:ag_handler(name, lines)
+  if len(a:lines) < 2
+    return
+  endif
+
+  let list = map(filter(a:lines[1:], 'len(v:val)'), 's:ag_to_qf(v:val)')
+  if empty(list)
+    return
+  endif
+
+  call s:action_for(a:lines[0], list[0].filename, len(list) > 1)
+  if s:fill_quickfix(a:name, list)
+    return
+  endif
+
+  " Single item selected
+  let first = list[0]
+  try
+    execute first.lnum
+    if has_key(first, 'col')
+      call cursor(0, first.col)
+    endif
+    normal! zvzz
+  catch
+  endtry
+endfunction
+" ============================================================================
+
 let s:fdcfg = tempname()
 function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
   let p = 'fd'
@@ -216,7 +298,7 @@ function! fzf#vim#rgfd#rg(bang, pattern, path='', resume=0)
 	for line in a:lines
 		echom line
 	endfor
-	return s:common_sink(action, lines)
+	return s:ag_handler(action, lines)
   endfunction
   let spec['sink*'] = remove(spec, 'newsink')
   "return fzf#vim#files('', spec, a:bang)

@@ -120,6 +120,7 @@ case $5 in
 				if [ -n "$L" ]; then L=; else L=l; fi 
 				;;
 		esac
+		save
 		;;
 	dir)
 		if [ -n "$6" ]; then
