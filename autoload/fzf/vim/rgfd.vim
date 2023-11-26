@@ -97,6 +97,11 @@ endfunction
 " ============================================================================
 let s:TYPE = {'bool': type(0), 'dict': type({}), 'funcref': type(function('call')), 'string': type(''), 'list': type([])}
 
+function! s:conf(name, default)
+  let conf = get(g:, 'fzf_vim', {})
+  return get(conf, a:name, get(g:, 'fzf_' . a:name, a:default))
+endfunction
+
 function! s:execute_silent(cmd)
   silent keepjumps keepalt execute a:cmd
 endfunction
@@ -131,7 +136,7 @@ endfunction
 
 function! s:fill_quickfix(name, list)
   if len(a:list) > 1
-    let Handler = s:conf('listproc_'.a:name, s:conf('listproc', function('fzf#vim#listproc#quickfix')))
+	let Handler = s:conf('listproc_'.a:name, s:conf('listproc', function('fzf#vim#listproc#quickfix')))
     call call(Handler, [a:list], {})
     return 1
   endif
@@ -295,13 +300,9 @@ function! fzf#vim#rgfd#rg(bang, pattern, path='', resume=0)
     let basedir = fnamemodify(basedir, ':p')
     let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
 	let action = get(g:, 'fzf_action', s:default_action)
-	for line in a:lines
-		echom line
-	endfor
-	return s:ag_handler(action, lines)
+	return s:ag_handler('rg', lines)
   endfunction
   let spec['sink*'] = remove(spec, 'newsink')
-  "return fzf#vim#files('', spec, a:bang)
   return fzf#vim#grep(initial_cmd, 1, spec, a:bang)
 endfunction
 
