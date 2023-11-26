@@ -1,5 +1,4 @@
-fzf-vim.txt	fzf-vim	Last change: June 4 2023
-fzf-vim-rgfd - TABLE OF CONTENTS                                *fzf-vim-rgfd* *fzf-vim-rgfd-toc*
+fzf-vim-rgfd - TABLE OF CONTENTS                *fzf-vim-rgfd* *fzf-vim-rgfd-toc*
 ==============================================================================
 
     Description                             |fzf-vim-rgfd-desc|
