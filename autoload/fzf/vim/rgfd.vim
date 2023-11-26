@@ -93,13 +93,6 @@ function! s:common_sink(action, lines) abort
 endfunction
 " ============================================================================
 
-function s:sinkall(basedir, lines)
-    let basedir = fnamemodify(a:basedir, ':p')
-    let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
-	let action = get(g:, 'fzf_action', s:default_action)
-	return s:common_sink(action, lines)
-endfunction
-
 let s:fdcfg = tempname()
 function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
   let p = 'fd'
@@ -120,7 +113,7 @@ function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
   if a:pattern == '.'
     let pattern = ''
   else
-    let pattern = shellescape(a:pattern)
+    let pattern = a:pattern
   endif
   let initial_cmd = sh.'run '.shellescape(pattern)
   if a:resume == 1
@@ -151,15 +144,83 @@ function! fzf#vim#rgfd#fd(bang, pattern='.', path='', resume=0)
         \'--color=dark,hl:'.hl_color.':bold,hl+:'.hl_color.':reverse',
         \], 'source': initial_cmd}
   let spec = fzf#vim#with_preview(spec)
-  " TODO use full prefix path
-  "return fzf#vim#files('', spec, a:bang)
   let spec.sh = sh
   function! spec.newsink(lines)
     let basedir = get(systemlist(self.sh.'prefix'), 0, '')
-    return s:sinkall(basedir, a:lines)
+    let basedir = fnamemodify(basedir, ':p')
+    let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
+	let action = get(g:, 'fzf_action', s:default_action)
+	return s:common_sink(action, lines)
   endfunction
   let spec['sink*'] = remove(spec, 'newsink')
   return fzf#vim#files('', spec, a:bang)
+endfunction
+
+let s:rgcfg = tempname()
+function! fzf#vim#rgfd#rg(bang, pattern, path='', resume=0)
+  let p = 'rg'
+  let pz = 'rgz'
+  let cfg = s:rgcfg
+  let qrg = cfg.'.rg' " store rg pattern
+  let qfzf = cfg.'.fzf' " store fzf pattern
+  let bdir =getcwd()
+  let dir = expand(a:path)
+  let absdir = fnamemodify(dir, ':p')
+  if a:resume == 1
+    let dirh = split(system("sha1sum", absdir))[0]
+  else
+    let dirh = ''
+  endif
+  let sh = printf('%s %s %s %s %s ', shellescape(s:bin.rg), shellescape(cfg),
+        \ shellescape(bdir), shellescape(dir), shellescape(dirh))
+  if a:pattern == '.'
+    let pattern = ''
+  else
+    let pattern = a:pattern
+  endif
+  let initial_cmd = sh.'run '.shellescape(pattern)
+  if a:resume == 1
+    let initial_cmd = initial_cmd.' 1'
+  endif
+  let reload_cmd = sh.'run {q}'
+  let reload_repeat_cmd = sh.'repeat'
+
+  let P = {msg -> 'transform-prompt('.sh.'prompt '.msg.')'}
+  let C = {cmd -> 'execute-silent('.sh.cmd.')+'.P('').'+reload('.reload_repeat_cmd.')'}
+  let T = {t -> 'execute-silent('.sh.'toggle '.t.')+'.P('').'+reload('.reload_repeat_cmd.')'}
+
+  let hl_color = 'red'
+  let spec = {'options': ['--query', '', '--ansi', '--scheme=path',
+        \'--bind', 'start:unbind(change,alt-z)+'.P(pz),
+        \'--prompt', pz.'> ',
+        \'--bind', 'change:reload:sleep 0.01; '.reload_cmd,
+        \'--bind', 'alt-x:unbind(alt-x)+'.P(p).'+disable-search+transform-query(echo {q} > '.qfzf.'; cat '.qrg.')+rebind(change,alt-z)',
+        \'--bind', 'alt-z:unbind(change,alt-z)+'.P(pz).'+enable-search+transform-query(echo {q} > '.qrg.'; cat '.qfzf.')+rebind(alt-x)',
+        \'--bind', 'alt-h:'.T('h'),
+        \'--bind', 'alt-i:'.T('i'),
+		\'--bind', 'alt-b:'.T('b'),
+        \'--bind', 'alt-l:'.T('l'),
+        \'--bind', 'alt-r:'.C('dir {}'),
+        \'--bind', 'ctrl-r:'.C('dir'),
+        \'--bind', 'alt-u:'.C('up'),
+        \'--header-lines', '1',
+        \'--color=dark,hl:'.hl_color.':bold,hl+:'.hl_color.':reverse',
+        \], 'source': initial_cmd}
+  let spec = fzf#vim#with_preview(spec)
+  let spec.sh = sh
+  function! spec.newsink(lines)
+    let basedir = get(systemlist(self.sh.'prefix'), 0, '')
+    let basedir = fnamemodify(basedir, ':p')
+    let lines = extend(a:lines[0:0], map(a:lines[1:], {_, line -> basedir.line}))
+	let action = get(g:, 'fzf_action', s:default_action)
+	for line in a:lines
+		echom line
+	endfor
+	return s:common_sink(action, lines)
+  endfunction
+  let spec['sink*'] = remove(spec, 'newsink')
+  "return fzf#vim#files('', spec, a:bang)
+  return fzf#vim#grep(initial_cmd, 1, spec, a:bang)
 endfunction
 
 " ----------------------------------------------------------------------------

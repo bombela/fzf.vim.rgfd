@@ -33,6 +33,25 @@ Commands
 | `:Rg [PATTERN]`        | [rg][rg] search result
 | `:Fd [PATTERN]`        | [fd][fd] search result
 
+Configuration example
+---------------------
+
+```viml
+" Current working directory file search (project search).
+" The search resumes with the last searched path. ctrl-r resets to the CWD.
+map <C-p> :Fd . . 1<CR>
+" Relative to current file search (relative search).
+" The search never resumes.
+map <C-\> :Fd . %:h 0<CR>
+
+" Current working directory, grep word under cursor (project search).
+" The search resumes with the last searched path. ctrl-r resets to the CWD.
+map <A-p> :execute "Rg ".expand("<cword>")<CR>
+" Relative to current file, grep word under cursor (relative search).
+" The search never resumes.
+map <A-\> :execute "Rg ".expand("<cword>")." %:h"<CR>
+```
+
 License
 -------
 

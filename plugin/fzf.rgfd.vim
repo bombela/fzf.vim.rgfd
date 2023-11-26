@@ -7,6 +7,7 @@ let s:cpo_save = &cpo
 set cpo&vim
 
 command! -bang -nargs=* -complete=dir Fd call fzf#vim#rgfd#fd(<bang>0, <f-args>)
+command! -bang -nargs=* -complete=dir Rg call fzf#vim#rgfd#rg(<bang>0, <f-args>)
 
 let &cpo = s:cpo_save
 unlet s:cpo_save

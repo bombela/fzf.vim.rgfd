@@ -1,18 +1,17 @@
 #!/bin/sh
 # Usage: fd.sh state_file bdir dir dir_hash cmd [arg]
 # state_file:
-#   - Used to store the toggle flags and dir.
+#   - Used to store the toggle flags.
+#   - <state_file>.d* stores the search directory.
 #   - <state_file>.fd stores the fd query for the command "repeat".
 #   - <state_file>.fzf stores the fzf query (only on the vim side).
 #   - <state_file>.p stores the currently active prompt.
-# bdir: absolute path to the current working directory of vim.
+# bdir: (base dir) absolute path to the current working directory of vim.
 # dir: directory to search in, relative to bdir or absolute.
 # dir_hash:
-# 	- hash of dir used to store and recall the last searched directory.
+# 	- hash of dir used to store and recall the search directory.
 # 	- empty strings turns off the feature.
 # cmd [arg]: see the case statement below.
-
-#echo "->$*" >> /tmp/ll
 
 rel2home() {
 	local d="`realpath --relative-base="$HOME" "$1"`"
@@ -71,7 +70,7 @@ case $5 in
 		esac
 		if [ -n "$H" ]; then f="$f --hidden"; fi
 		if [ -n "$I" ]; then f="$f --no-ignore"; fi
-		if [ -n "$L" ]; then f="$f -L"; fi
+		if [ -n "$L" ]; then f="$f --follow"; fi
 		if [ -n "$D" ]; then f="$f -td"; else f="$f -tf -tl"; fi
 		d="`realpath --relative-base="$BDIR" "$DIR"`"
 		case "$d" in

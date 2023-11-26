@@ -1,50 +1,112 @@
 #!/bin/sh
-# Usage: rg.sh state_file base_dir rel_dir cmd [arg]
-test -f $1 && . $1
-cmd="rg --column --no-heading --color=always -S"
-case $4 in
+# Usage: rg.sh state_file bdir dir dir_hash cmd [arg]
+# state_file:
+#   - Used to store the toggle flags.
+#   - <state_file>.d* stores the search directory.
+#   - <state_file>.rg stores the rg query for the command "repeat".
+#   - <state_file>.fzf stores the fzf query (only on the vim side).
+#   - <state_file>.p stores the currently active prompt.
+# bdir: (base dir) absolute path to the current working directory of vim.
+# dir: directory to search in, relative to bdir or absolute.
+# dir_hash:
+# 	- hash of dir used to store and recall the search directory.
+# 	- empty strings turns off the feature.
+# cmd [arg]: see the case statement below.
+
+rel2home() {
+	local d="`realpath --relative-base="$HOME" "$1"`"
+	case $d in
+		/*)
+			echo "$d"
+			;;
+		*)
+			if [ "$d" = "." ]; then
+				d=""
+			fi
+			echo "~/$d"
+			;;
+	esac
+}
+
+save() {
+	t="`mktemp`"
+	cat<<EOF>"$t"
+	H=$H
+	I=$I
+	B=$B
+	L=$L
+EOF
+	mv "$t" "$STATEFILE"
+}
+
+savedir() {
+	echo "$DIR" > "$DIRFILE"
+}
+
+STATEFILE="$1"
+BDIR="$2"
+DIR="$3"
+DIRH="$4"
+#shift 4
+DIRFILE="$STATEFILE.d$DIRH"
+
+test -f "$STATEFILE" && . "$STATEFILE"
+test -f "$DIRFILE" && DIR="`cat "$DIRFILE"`"
+
+case $5 in
 	run|repeat)
-		case $4 in
+		# run $QUERY [resume] | repeat
+		case $5 in
 			run)
-				query="$5"
-				echo "$query" > "$1.fd"
+				query="$6"
+				echo "$query" > "$1.rg"
+				if [ -z "$7" ]; then
+					DIR="$3"
+					savedir
+				fi
 				;;
 			repeat)
-				query="`cat "$1.fd"`"
+				query="`cat "$1.rg"`"
 				;;
 		esac
 		if [ -n "$H" ]; then f="$f --hidden"; fi 
 		if [ -n "$I" ]; then f="$f --no-ignore"; fi 
 		if [ -n "$B" ]; then f="$f --text"; fi 
-		if [ -n "$L" ]; then f="$f -L"; fi 
-		if [ -n "$BDIR" ]; then bdir="$BDIR"; else bdir="$2"; fi 
-		if [ -n "$RDIR" ]; then rdir="$RDIR"; else rdir="$3"; fi 
-		if [ -z "$BDIR" ]; then
-			echo "$rdir"
-		else
-			echo "($bdir)/$rdir"
-		fi
+		if [ -n "$L" ]; then f="$f --follow"; fi 
+		d="`realpath --relative-base="$BDIR" "$DIR"`"
+		case "$d" in
+			/*)
+				rel2home "$DIR"
+				bdir="$DIR"
+				;;
+			*)
+				[ "$d" = "." ] && d=""
+				echo "`rel2home "$BDIR"`\033[1m/$d\033[0m"
+				bdir="$BDIR/$d"
+				;;
+		esac
 		cd "$bdir"
-		if [ -n "$rdir" ]; then
-			$cmd $f -- "$query" "$rdir"
-		else
-			$cmd $f -- "$query"
-		fi
-		exit 0
+		exec rg --column --no-heading --color=always -S $f -- "$query"
 		;;
 	prompt)
-		if [ -n "$5" ]; then
-			P="$5"
+		if [ -n "$6" ]; then
+			p="$6"
+			echo "$p" > "$1.p"
+		else
+			p="`cat "$1.p"`"
+			if [ -z "$p" ]; then
+				p="fzf"
+			fi
 		fi
 		flags="$H$I$B$L"
 		if [ -n "$flags" ]; then
-			echo -n "[$flags] $P>"
+			echo -n "[$flags] $p>"
 		else
-			echo -n "$P>"
+			echo -n "$p>"
 		fi
 		;;
 	toggle)
-		case $5 in
+		case $6 in
 			h)
 				if [ -n "$H" ]; then H=; else H=h; fi 
 				;;
@@ -59,36 +121,43 @@ case $4 in
 				;;
 		esac
 		;;
-	rdir)
-		if [ -n "$5" ]; then
-			RDIR="$5"
-			BDIR=""
+	dir)
+		if [ -n "$6" ]; then
+			# Override DIR.
+			case "$DIR" in
+				/*)
+					d="$DIR/$6"
+					;;
+				*)
+					d="$BDIR/$DIR/$6"
+					;;
+			esac
+			if [ -d "$d" ]; then
+				DIR="$d"
+			elif [ -e "$d" ]; then
+				DIR="`dirname "$d"`"
+			fi
 		else
-			RDIR=""
-			BDIR=""
+			# Reset DIR to initial value.
+			DIR="$3"
 		fi
+		savedir
 		;;
 	up)
-		if [ -z "$RDIR" ]; then RDIR="$3"; fi 
-		if [ "$RDIR" = "." -o -z "$RDIR" ]; then
-			if [ -n "$BDIR" ]; then bdir="$BDIR"; else bdir="$2"; fi 
-			RDIR="`realpath --relative-base="$HOME" "$bdir"`"
-			if [ "$RDIR" = "." ]; then
-				RDIR="`realpath "$bdir"`"
-				BDIR="/"
-			else
-				BDIR="$HOME"
-			fi
+		if [ "$DIR" = "." -o -z "$DIR" ]; then
+			DIR="`realpath "$BDIR"`"
 		fi
-		RDIR="`dirname "$RDIR"`"
+		DIR="`dirname "$DIR"`"
+		savedir
+		;;
+	prefix)
+		case "$DIR" in
+			/*)
+				echo "$DIR"
+				;;
+			*)
+				echo "$BDIR/$DIR"
+				;;
+		esac
 		;;
 esac
-
-cat<<EOF>$1
-P=$P
-H=$H
-I=$I
-B=$B
-L=$L
-RDIR="$RDIR"
-BDIR="$BDIR"
