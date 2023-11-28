@@ -6,6 +6,7 @@ fzf-vim-rgfd - TABLE OF CONTENTS                *fzf-vim-rgfd* *fzf-vim-rgfd-toc
     Dependencies                            |fzf-vim-rgfd-deps|
     :Fd                                     |fzf-vim-rgfd-fd|
     :Rg                                     |fzf-vim-rgfd-rg|
+		fzf.vim shortcuts                       |fzf-vim-rgfd-common|
     License                                 |fzf-vim-rgfd-license|
 
 
@@ -119,6 +120,18 @@ possible forms:
 	- (~/<CWD relative to $HOME>)/<PATH relative to CWD>
 	- /<absolute PATH>
 
+
+Common                                                     *fzf-vim-rgfd-common*
+==============================================================================
+
+This plugin respects the fzf.vim actions, the defaults are:
+  - ctrl-t': 'tab split'
+  - ctrl-x': 'split'
+  - ctrl-v': 'vsplit'
+
+Multi-selection is also supported (shorcut: <tab>).
+ `:Fd`: Opens all the files via the selected action.
+ `:Rg`: Load all the locations into the quickfix list.
 
 LICENSE                                                   *fzf-vim-rgfd-license*
 ==============================================================================
