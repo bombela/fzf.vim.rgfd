@@ -33,7 +33,7 @@ Commands
 |command|description|
 |---|---|
 | `:Fd[!] [PATTERN] [PATH] [RESUME=0]` | [rg][rg] search result |
-| `:Rd[!] PATTERN [PATH] [RESUME=0]` | [fd][fd] search result |
+| `:Rg[!] PATTERN [PATH] [RESUME=0]` | [fd][fd] search result |
 
 Configuration example
 ---------------------
@@ -53,6 +53,11 @@ map <A-p> :execute "Rg ".expand("<cword>")<CR>
 " The search never resumes.
 map <A-\> :execute "Rg ".expand("<cword>")." %:h"<CR>
 ```
+
+Documentation
+-------------
+
+`:help fzf-vim-rgfd` or [doc/fzf-vim-rgfd.txt](doc/fzf-vim-rgfd.txt).
 
 License
 -------
